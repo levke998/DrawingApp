@@ -18,34 +18,46 @@ if "%commit_msg%"=="" set commit_msg="Update"
 :: Try to commit
 git commit -m "%commit_msg%"
 
-:: If commit failed, it's likely the identity error. Fix it and retry.
+:: If commit failed (likely identity), retry once with input
 if %errorlevel% neq 0 (
     echo.
-    echo ===================================================
-    echo  Git Identity Missing or Invalid
-    echo ===================================================
-    echo.
-    echo Please enter your details to configure Git for this project.
-    echo.
-    
+    echo Git Identity Missing. Please configure:
     set /p u_name="Enter your Name: "
     set /p u_email="Enter your Email: "
-    
-    :: Use call to ensure variables are used immediately
     call git config user.name "%%u_name%%"
     call git config user.email "%%u_email%%"
-    
-    echo.
-    echo Identity updated! Retrying save...
-    echo.
-    
     call git commit -m "%commit_msg%"
 )
 
 echo.
-if %errorlevel% equ 0 (
-    echo Changes saved successfully!
-) else (
-    echo Still could not save. Please check the error messages above.
+echo ===================================================
+echo  Syncing with GitHub...
+echo ===================================================
+echo.
+
+:: Ensure branch is main
+git branch -M main
+
+:: Add remote if it doesn't exist
+git remote add origin https://github.com/levke998/DrawingApp.git >nul 2>&1
+
+:: Push to GitHub
+echo Pushing changes to GitHub...
+git push -u origin main
+
+if %errorlevel% neq 0 (
+    echo.
+    echo [WARNING] Push failed. 
+    echo If the remote repo has files (like a README), we might need to sync first.
+    echo.
+    choice /M "Do you want to force upload (WARNING: Overwrites remote files)?"
+    if errorlevel 1 (
+        git push -u origin main --force
+        echo.
+        echo Force push completed.
+    )
 )
+
+echo.
+echo Done!
 pause
